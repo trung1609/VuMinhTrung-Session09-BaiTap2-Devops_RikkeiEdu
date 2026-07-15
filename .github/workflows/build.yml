@@ -9,6 +9,7 @@ on:
 env:
   CI_COMMIT_REF_SLUG: ${{ github.ref_name }}
   GRADLE_USER_HOME: ~/.gradle
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +25,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
       - name: Restore Gradle cache
         uses: actions/cache@v4
         with:
@@ -33,9 +39,6 @@ jobs:
           key: ${{ env.CI_COMMIT_REF_SLUG }}-gradle-${{ hashFiles('**/build.gradle') }}
           restore-keys: |
             ${{ env.CI_COMMIT_REF_SLUG }}-gradle-
-
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
 
       - name: Build with Gradle
         run: gradle clean build -x test
@@ -70,6 +73,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
       - name: Restore Gradle cache
         uses: actions/cache@v4
         with:
@@ -86,31 +94,5 @@ jobs:
           name: build-artifact
           path: build/
 
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
-
       - name: Run tests
-        run: ./gradlew test
-
-      - name: Generate test report
-        if: always()
-        run: |
-          mkdir -p test-results
-          cp -r build/test-results/* test-results/ || true
-
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: test-results/
-          retention-days: 30
-
-      - name: Publish JaCoCo coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: build/reports/jacoco/
-          retention-days: 30
-
+        run: gradle test
