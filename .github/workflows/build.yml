@@ -1,0 +1,117 @@
+name: Build & Test Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev, ci-test ]
+  pull_request:
+    branches: [ main, master, dev, ci-test ]
+
+env:
+  CI_COMMIT_REF_SLUG: ${{ toLower(replace(github.ref_name, '/', '-')) }}
+  GRADLE_USER_HOME: ~/.gradle
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ env.CI_COMMIT_REF_SLUG }}-gradle-${{ hashFiles('**/build.gradle') }}
+          restore-keys: |
+            ${{ env.CI_COMMIT_REF_SLUG }}-gradle-
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: build/
+          key: ${{ env.CI_COMMIT_REF_SLUG }}-build-${{ github.run_id }}
+          restore-keys: |
+            ${{ env.CI_COMMIT_REF_SLUG }}-build-
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build/
+          retention-days: 1
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ env.CI_COMMIT_REF_SLUG }}-gradle-${{ hashFiles('**/build.gradle') }}
+          restore-keys: |
+            ${{ env.CI_COMMIT_REF_SLUG }}-gradle-
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+          path: build/
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Generate test report
+        if: always()
+        run: |
+          mkdir -p test-results
+          cp -r build/test-results/* test-results/ || true
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: test-results/
+          retention-days: 30
+
+      - name: Publish JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: build/reports/jacoco/
+          retention-days: 30
+

@@ -1,0 +1,9 @@
+stages:
+  - build_app # SỬA LỖI 1: Thêm dấu gạch ngang để định nghĩa mảng
+
+build_job:
+  stage: build_app
+  image: gradle:8.5-jdk17-alpine # SỬA LỖI 2: Khai báo image chứa sẵn JDK 17 và Gradle
+  script:
+    - chmod +x gradlew # (Tùy chọn) Cấp quyền thực thi cho file wrapper
+    - ./gradlew clean build -x test
