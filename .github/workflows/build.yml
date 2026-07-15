@@ -7,7 +7,7 @@ on:
     branches: [ main, master, dev, ci-test ]
 
 env:
-  CI_COMMIT_REF_SLUG: ${{ toLower(replace(github.ref_name, '/', '-')) }}
+  CI_COMMIT_REF_SLUG: ${{ github.ref_name }}
   GRADLE_USER_HOME: ~/.gradle
 jobs:
   build:
